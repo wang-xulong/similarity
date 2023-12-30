@@ -21,12 +21,12 @@ config = Namespace(
     project_name='CIFAR10',
     basic_task=0,  # count from 0
     experience=5,
-    train_bs=128,
+    train_bs=16,
     test_bs=128,
     lr_init=0.1,
-    max_epoch=500,
-    run_times=5,
-    patience=50
+    max_epoch=200,
+    run_times=2,
+    patience=100
 )
 
 accuracy_list1 = []  # multiple run
@@ -52,7 +52,7 @@ for run in range(config.run_times):
     # ------------------------------------ step 3/5 : define loss function and optimization ------------------------
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=config.lr_init, weight_decay=5e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config.patience)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config.max_epoch)
     # ------------------------------------ step 4/5 : training --------------------------------------------------
     # training basic task
     print("training basic task %d" % task_id[config.basic_task])
