@@ -7,12 +7,12 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 import copy
 from CLDataset import MyDataset
-import wandb
+# import wandb
 
 experience = 5
 
 
-def trainES(train_data, test_data, model, criterion, optimizer, max_epoch, device, patience, task_id,
+def trainES(train_data, test_data, model, criterion, optimizer, scheduler, max_epoch, device, patience, task_id,
             func_sim=False):
     # 要记录训练的epoch
     record_epoch = 0
@@ -73,7 +73,7 @@ def trainES(train_data, test_data, model, criterion, optimizer, max_epoch, devic
             train_acc = np.average(train_accs)
             valid_acc = np.average(valid_accs)
             # 记录每个epoch的训练下任务的情况
-            wandb.log({"Train id:" + str(task_id): valid_acc, "epoch": e})
+            # wandb.log({"Train id:" + str(task_id): valid_acc, "epoch": e})
             avg_train_losses.append(train_loss)
             avg_valid_losses.append(valid_loss)
             avg_train_accs.append(train_acc)
@@ -91,6 +91,8 @@ def trainES(train_data, test_data, model, criterion, optimizer, max_epoch, devic
             if early_stopping.early_stop:
                 print("Early stopping")
                 break
+            # adjust learning rate
+            scheduler.step()
     # load the last checkpoint with the best model
     model.load_state_dict(torch.load('checkpoint.pt'))
 
@@ -178,7 +180,7 @@ def test(test_data, model, criterion, device, task_id):
     test_loss = test_data_loss / len(test_data.dataset)
     acc = test_data_acc / (t_j + 1)
     print("-----------test loss {:.4}, acc {:.4} ".format(test_loss, acc))
-    wandb.log({"Test id:" + str(task_id): acc})
+
     return test_loss.cpu(), acc.cpu()
 
 
@@ -206,10 +208,8 @@ def get_Cifar10(train_bs=128, test_bs=64):
         train_data = MyDataset(txt_path=train_txt_path, transform=trainTransform)
         test_data = MyDataset(txt_path=test_txt_path, transform=testTransform)
         # 构建CLDataLoader
-        train_loader = DataLoader(dataset=train_data, batch_size=train_bs, shuffle=True, num_workers=2, pin_memory=True,
-                                  prefetch_factor=train_bs * 2)
-        test_loader = DataLoader(dataset=test_data, batch_size=test_bs, num_workers=2, pin_memory=True,
-                                 prefetch_factor=test_bs * 2)
+        train_loader = DataLoader(dataset=train_data, batch_size=train_bs, shuffle=True)
+        test_loader = DataLoader(dataset=test_data, batch_size=test_bs)
         # 添加到stream list中
         train_stream.append(train_loader)
         test_stream.append(test_loader)
