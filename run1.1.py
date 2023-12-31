@@ -10,6 +10,7 @@ from torchvision.models.resnet import resnet18
 from argparse import Namespace
 from metrics import compute_acc_fgt
 from util import get_Cifar10, train_es, test
+from external_libs.pyhessian import hessian
 # ------------------------------------ step 0/5 : initialise hyper-parameters ------------------------------------
 config = Namespace(
     project_name='CIFAR10',
@@ -94,12 +95,10 @@ for run in range(config.run_times):
             task_id = task_id[j]
             _, acc_array2[j, 0] = test(basic_task_test_data, trained_model, criterion, config.device, task_id=task_id)
             _, acc_array2[j, 1] = test(test_stream[j], trained_model, criterion, config.device, task_id=task_id)
-
-            #  (optional) compute eigenvalues of Loss Hessian
-            if config.hessian:
-                hessian_eig_db = log_hessian(trained_model, test_stream[j], task_id, hessian_eig_db, config)
-                print(hessian_eig_db)
-
+        # (optional) calculate Hessian
+        hessian_comp = hessian(trained_model, criterion, dataloader=test_stream[j], cuda=True)
+        top_eigenvalues, top_eigenvector = hessian_comp.eigenvalues()
+        print("The top Hessian eigenvalue of this model is %.4f" % top_eigenvalues[-1])
 
         # computing avg_acc and CF
     accuracy_list1.append([acc_array1[0, :], acc_array2[0, :]])
