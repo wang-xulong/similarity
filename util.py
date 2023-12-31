@@ -1,5 +1,5 @@
 from metrics import accuracy
-from pytorchtools import EarlyStopping
+from external_libs.pytorchtools import EarlyStopping
 import torch
 import numpy as np
 import os
@@ -12,7 +12,7 @@ from CLDataset import MyDataset
 experience = 5
 
 
-def trainES(train_data, test_data, model, criterion, optimizer, scheduler, max_epoch, device, patience, task_id,
+def train_es(train_data, test_data, model, criterion, optimizer, scheduler, max_epoch, device, patience, task_id,
             func_sim=False):
     # 要记录训练的epoch
     record_epoch = 0
