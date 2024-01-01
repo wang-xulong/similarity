@@ -10,7 +10,9 @@ from torchvision.models.resnet import resnet18
 from argparse import Namespace
 from metrics import compute_acc_fgt
 from util import get_Cifar10, train_es, test
-from external_libs.pyhessian import hessian
+# from external_libs.pyhessian import hessian
+from external_libs.hessian_eigenthings import compute_hessian_eigenthings
+
 # ------------------------------------ step 0/5 : initialise hyper-parameters ------------------------------------
 config = Namespace(
     project_name='CIFAR10',
@@ -58,6 +60,23 @@ for run in range(config.run_times):
                                                    scheduler, config.max_epoch, config.device, patience=config.patience,
                                                    task_id=config.basic_task, func_sim=False)
 
+    # calculate Hessian eignvalues
+    eigenvals, eigenvecs = compute_hessian_eigenthings(
+        model,
+        basic_task_test_data,
+        criterion,
+        num_eigenthings=3,
+        mode="power_iter",
+        # power_iter_steps=args.num_steps,
+        max_possible_gpu_samples=2048,
+        # momentum=args.momentum,
+        use_gpu=False,
+    )
+    print("Eigenvecs:")
+    print(eigenvecs)
+    print("Eigenvals:")
+    print(eigenvals)
+
     # setting stage 1 matrix
     acc_array1 = np.zeros((4, 2))
     # testing basic task
@@ -95,10 +114,6 @@ for run in range(config.run_times):
             task_id = task_id[j]
             _, acc_array2[j, 0] = test(basic_task_test_data, trained_model, criterion, config.device, task_id=task_id)
             _, acc_array2[j, 1] = test(test_stream[j], trained_model, criterion, config.device, task_id=task_id)
-        # (optional) calculate Hessian
-        hessian_comp = hessian(trained_model, criterion, dataloader=test_stream[j], cuda=True)
-        top_eigenvalues, top_eigenvector = hessian_comp.eigenvalues()
-        print("The top Hessian eigenvalue of this model is %.4f" % top_eigenvalues[-1])
 
         # computing avg_acc and CF
     accuracy_list1.append([acc_array1[0, :], acc_array2[0, :]])
