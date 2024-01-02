@@ -2,6 +2,8 @@
 #SBATCH --comment=cifar10
 #SBATCH --mem=32G
 #SBATCH --partition=gpu
+#SBATCH --qos=gpu
+#SBATCH --gres=gpu:1
 #SBATCH --mail-user=xl.wang@sheffield.ac.uk
 
 # Load the conda module
