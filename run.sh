@@ -18,6 +18,7 @@ cd /users/acq21xw/similarity
 pip install -r requirements.txt
 pip install wandb
 wandb login
+pip install avalanche-lib
 
 # 执行以下工作流程
 #python run2.1.py > log.txt 2>&1
