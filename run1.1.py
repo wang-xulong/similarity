@@ -11,7 +11,7 @@ from argparse import Namespace
 from metrics import compute_acc_fgt
 from util import get_Cifar10, train_es, test
 from external_libs.hessian_eigenthings import compute_hessian_eigenthings
-import wandb
+# import wandb
 import datetime
 
 # ------------------------------------ step 0/5 : initialise hyper-parameters ------------------------------------
@@ -48,7 +48,7 @@ config.device = torch.device(config.device if torch.cuda.is_available() else "cp
 config.kwargs = {"num_workers": 16, "pin_memory": True, "prefetch_factor": config.train_bs * 2} if use_cuda else {}
 
 now_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-wandb.init(project=config.project_name, config=config.__dict__, name=now_time, save_code=True)
+# wandb.init(project=config.project_name, config=config.__dict__, name=now_time, save_code=True)
 
 for run in range(config.run_times):
     print("run time: {}".format(run + 1))
@@ -159,4 +159,4 @@ print('----------- Avg_End_Acc {} Avg_End_Fgt {} Avg_Acc {}-----------'.format(a
 
 # (optional) save hessian result
 np.save('hessian_result.npy', hessian_result)
-wandb.finish()
+# wandb.finish()

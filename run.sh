@@ -17,7 +17,6 @@ cd /users/acq21xw/similarity
 # 安装依赖环境
 pip install -r requirements.txt
 pip install wandb
-wandb login
 pip install avalanche-lib
 
 # 执行以下工作流程

@@ -15,7 +15,7 @@ wandb*
 *generate_txt.py
 run
 #*requirements.txt
-*.txt
+#*.txt
 Data/
 
 
