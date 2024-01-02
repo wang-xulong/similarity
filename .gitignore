@@ -14,7 +14,7 @@ wandb*
 *download_data.py
 *generate_txt.py
 run
-*requirements.txt
+#*requirements.txt
 *.txt
 Data/
 
