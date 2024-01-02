@@ -184,7 +184,7 @@ def test(test_data, model, criterion, device, task_id):
     return test_loss.cpu(), acc.cpu()
 
 
-def get_Cifar10(train_bs=128, test_bs=64):
+def get_Cifar10(config):
     train_dir = os.path.join("./", "Data", "SplitCifar10", "train")
     test_dir = os.path.join("./", "Data", "SplitCifar10", "test")
     train_stream = []
@@ -208,8 +208,15 @@ def get_Cifar10(train_bs=128, test_bs=64):
         train_data = MyDataset(txt_path=train_txt_path, transform=trainTransform)
         test_data = MyDataset(txt_path=test_txt_path, transform=testTransform)
         # 构建CLDataLoader
-        train_loader = DataLoader(dataset=train_data, batch_size=train_bs, shuffle=True)
-        test_loader = DataLoader(dataset=test_data, batch_size=test_bs)
+        train_loader = DataLoader(dataset=train_data, batch_size=config.train_bs, shuffle=True
+                                  , num_workers=config.kwargs['num_workers']
+                                  , pin_memory=config.kwargs['pin_memory']
+                                  , prefetch_factor=config.kwargs['prefetch_factor'])
+        test_loader = DataLoader(dataset=test_data, batch_size=config.test_bs
+                                 , num_workers=config.kwargs['num_workers']
+                                 , pin_memory=config.kwargs['pin_memory']
+                                 , prefetch_factor=config.kwargs['prefetch_factor']
+                                 )
         # 添加到stream list中
         train_stream.append(train_loader)
         test_stream.append(test_loader)
