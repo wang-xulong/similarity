@@ -6,13 +6,15 @@ import os
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
+import pandas as pd
 from torchvision.models.resnet import resnet18
 from argparse import Namespace
 from metrics import compute_acc_fgt
 from util import get_Cifar10, train_es, test
-from external_libs.hessian_eigenthings import compute_hessian_eigenthings
-# import wandb
+import wandb
 import datetime
+
+import socket
 
 # ------------------------------------ step 0/5 : initialise hyper-parameters ------------------------------------
 config = Namespace(
@@ -23,19 +25,19 @@ config = Namespace(
     test_bs=128,
     lr_init=0.01,
     max_epoch=200,
-    run_times=10,
+    run_times=3,
     patience=100,
     hessian=True,
     device='cuda',
-    kwargs={}
+    kwargs={},
+    func_sim=False
 )
 
 accuracy_list1 = []  # multiple run
 accuracy_list2 = []
 accuracy_list3 = []
 accuracy_list4 = []
-# fill in hessian
-hessian_result = {}
+hessian_result = {}  # fill in hessian
 
 # use GPU?
 no_cuda = False
@@ -48,7 +50,7 @@ config.device = torch.device(config.device if torch.cuda.is_available() else "cp
 config.kwargs = {"num_workers": 16, "pin_memory": True, "prefetch_factor": config.train_bs * 2} if use_cuda else {}
 
 now_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-# wandb.init(project=config.project_name, config=config.__dict__, name=now_time, save_code=True)
+wandb.init(project=config.project_name, config=config.__dict__, name=socket.gethostname()+now_time, save_code=True)
 
 for run in range(config.run_times):
     print("run time: {}".format(run + 1))
@@ -68,27 +70,21 @@ for run in range(config.run_times):
     print("training basic task %d" % task_id[config.basic_task_index])
     basic_task_data = train_stream[config.basic_task_index]
     basic_task_test_data = test_stream[config.basic_task_index]
-    model, _, _, avg_valid_losses, _, _ = train_es(basic_task_data, basic_task_test_data, model, criterion, optimizer,
-                                                   scheduler, config.max_epoch, config.device, patience=config.patience,
-                                                   task_id=config.basic_task_index, func_sim=False)
-    # (option) calculate Hessian eignvalues
-    eigenvals, _ = compute_hessian_eigenthings(
-        model,
-        basic_task_test_data,
-        criterion,
-        num_eigenthings=3,
-        mode="power_iter",
-        max_possible_gpu_samples=2048,
-        use_gpu=True,
-    )
-    key = "run {} - task {}‘s Hessian".format(run+1, task_id[config.basic_task_index])
-    hessian_result[key] = eigenvals
-    print(key, hessian_result[key])
+    model, _, _, avg_valid_losses, _, _, hessian_val = train_es(config, basic_task_data, basic_task_test_data, model,
+                                                                criterion, optimizer,
+                                                                scheduler, config.max_epoch, config.device,
+                                                                patience=config.patience,
+                                                                task_id=task_id[config.basic_task_index],
+                                                                func_sim=config.func_sim,
+                                                                hessian=config.hessian, run_time=run + 1)
+    if config.hessian is True:
+        hessian_result.update(hessian_val)
 
     # setting stage 1 matrix
     acc_array1 = np.zeros((4, 2))
     # testing basic task
-    _, acc_array1[:, 0] = test(test_stream[config.basic_task_index], model, criterion, config.device, task_id=config.basic_task_index)
+    _, acc_array1[:, 0] = test(test_stream[config.basic_task_index], model, criterion, config.device,
+                               task_id=config.basic_task_index)
     # pop the src data from train_stream and test_stream
     train_stream.pop(config.basic_task_index)
     test_stream.pop(config.basic_task_index)
@@ -113,28 +109,23 @@ for run in range(config.run_times):
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.SGD(trained_model.parameters(), lr=config.lr_init, momentum=0.9, dampening=0.1)
         # training other tasks
-        trained_model, _, _, _, _, new_task_first_loss = train_es(train_data, test_data, trained_model, criterion,
-                                                                  optimizer, scheduler, config.max_epoch, config.device,
-                                                                  config.patience, task_id=task_id[j], func_sim=True)
+        trained_model, _, _, _, _, new_task_first_loss, hessian_val = train_es(config, train_data, test_data,
+                                                                               trained_model,
+                                                                               criterion, optimizer, scheduler,
+                                                                               config.max_epoch,
+                                                                               config.device, config.patience,
+                                                                               task_id=task_id[j],
+                                                                               func_sim=config.func_sim,
+                                                                               hessian=config.hessian,
+                                                                               run_time=run + 1)
+        if config.hessian is True:
+            hessian_result.update(hessian_val)
 
         # test model on basic task and task j
         with torch.no_grad():
-            _, acc_array2[j, 0] = test(basic_task_test_data, trained_model, criterion, config.device, task_id=task_id[j])
+            _, acc_array2[j, 0] = test(basic_task_test_data, trained_model, criterion, config.device,
+                                       task_id=task_id[j])
             _, acc_array2[j, 1] = test(test_stream[j], trained_model, criterion, config.device, task_id=task_id[j])
-
-        # (option) calculate Hessian eignvalues
-        eigenvals, _ = compute_hessian_eigenthings(
-            trained_model,
-            test_stream[j],
-            criterion,
-            num_eigenthings=3,
-            mode="power_iter",
-            max_possible_gpu_samples=2048,
-            use_gpu=True,
-        )
-        key = "run {} - task {}‘s Hessian".format(run + 1, task_id[j])
-        hessian_result[key] = eigenvals
-        print(key, hessian_result[key])
 
         # computing avg_acc and CF
     accuracy_list1.append([acc_array1[0, :], acc_array2[0, :]])
@@ -147,7 +138,6 @@ accuracy_array2 = np.array(accuracy_list2)
 accuracy_array3 = np.array(accuracy_list3)
 accuracy_array4 = np.array(accuracy_list4)
 
-
 avg_end_acc, avg_end_fgt, avg_acc = compute_acc_fgt(accuracy_array1)
 print('----------- Avg_End_Acc {} Avg_End_Fgt {} Avg_Acc {}-----------'.format(avg_end_acc, avg_end_fgt, avg_acc))
 avg_end_acc, avg_end_fgt, avg_acc = compute_acc_fgt(accuracy_array2)
@@ -157,6 +147,11 @@ print('----------- Avg_End_Acc {} Avg_End_Fgt {} Avg_Acc {}-----------'.format(a
 avg_end_acc, avg_end_fgt, avg_acc = compute_acc_fgt(accuracy_array4)
 print('----------- Avg_End_Acc {} Avg_End_Fgt {} Avg_Acc {}-----------'.format(avg_end_acc, avg_end_fgt, avg_acc))
 
-# (optional) save hessian result
-np.save('hessian_result.npy', hessian_result)
-# wandb.finish()
+if config.hessian is True:
+    # (optional) save hessian result as .npy
+    np.save('hessian_result.npy', hessian_result)
+    # (optional) save hessian result as .csv
+    hessian_df = pd.DataFrame(hessian_result)
+    hessian_df.to_csv('hessian_result.csv')
+
+wandb.finish()

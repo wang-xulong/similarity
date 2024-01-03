@@ -7,13 +7,16 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 import copy
 from CLDataset import MyDataset
+from external_libs.hessian_eigenthings import compute_hessian_eigenthings
+
 # import wandb
 
 experience = 5
 
 
-def train_es(train_data, test_data, model, criterion, optimizer, scheduler, max_epoch, device, patience, task_id,
-            func_sim=False):
+def train_es(config, train_data, test_data, model, criterion, optimizer, scheduler, max_epoch, device, patience,
+             task_id,
+             func_sim=False, hessian=False, run_time=0):
     # 要记录训练的epoch
     record_epoch = 0
     # 新任务第一次梯度下降后的损失
@@ -30,6 +33,8 @@ def train_es(train_data, test_data, model, criterion, optimizer, scheduler, max_
     valid_accs = []
     avg_train_accs = []
     avg_valid_accs = []
+    # fill in hessian
+    hessian_result = {}
 
     # initialize the early_stopping object
     early_stopping = EarlyStopping(patience=patience, verbose=True)
@@ -84,6 +89,7 @@ def train_es(train_data, test_data, model, criterion, optimizer, scheduler, max_
                          f' valid_loss: {valid_loss:.5f}' +
                          f' train_acc: {train_acc:.5f}' +
                          f' valid_acc: {valid_acc:.5f}')
+
             print(print_msg)
             train_losses = []
             valid_losses = []
@@ -93,10 +99,26 @@ def train_es(train_data, test_data, model, criterion, optimizer, scheduler, max_
                 break
             # adjust learning rate
             scheduler.step()
+
+        # (optional) calculate hessian top eigen_value
+        if hessian is True:
+            eigen_vals, _ = compute_hessian_eigenthings(
+                model,
+                test_data,
+                criterion,
+                num_eigenthings=1,
+                mode="power_iter",
+                max_possible_gpu_samples=config.test_bs,
+                use_gpu=True,
+            )
+            key = "run {} - epoch {} - task {} Hessian".format(run_time, e, task_id)
+            hessian_result[key] = eigen_vals
+            print(key, hessian_result[key])
+
     # load the last checkpoint with the best model
     model.load_state_dict(torch.load('checkpoint.pt'))
 
-    return model, avg_train_losses, avg_train_accs, avg_valid_losses, avg_valid_accs, new_task_loss
+    return model, avg_train_losses, avg_train_accs, avg_valid_losses, avg_valid_accs, new_task_loss, hessian_result
 
 
 def train(train_data, test_data, model, criterion, optimizer, max_epoch, device, func_sim=False):

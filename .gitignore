@@ -10,12 +10,14 @@ __pycache__/
 *.pt
 *.csv
 *.out
+*.npy
 wandb*
 *download_data.py
 *generate_txt.py
 run
 #*requirements.txt
 #*.txt
+test.py
 Data/
 
 
