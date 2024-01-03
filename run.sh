@@ -21,7 +21,7 @@ pip install wandb
 pip install avalanche-lib
 
 # 执行以下工作流程
-#python run2.1.py > log.txt 2>&1
-python download_data.py
-python generate_txt.py
+#第一次加载数据需要
+#python download_data.py
+#python generate_txt.py
 python run1.1.py
