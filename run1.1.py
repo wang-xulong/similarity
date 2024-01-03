@@ -21,12 +21,12 @@ config = Namespace(
     project_name='CIFAR10',
     basic_task_index=0,  # count from 0
     experience=5,
-    train_bs=16,
+    train_bs=10,
     test_bs=128,
-    lr_init=0.01,
+    lr_init=0.1,
     max_epoch=200,
     run_times=3,
-    patience=100,
+    patience=20,
     hessian=True,
     device='cuda',
     kwargs={},
@@ -50,7 +50,7 @@ config.device = torch.device(config.device if torch.cuda.is_available() else "cp
 config.kwargs = {"num_workers": 16, "pin_memory": True, "prefetch_factor": config.train_bs * 2} if use_cuda else {}
 
 now_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-wandb.init(project=config.project_name, config=config.__dict__, name=socket.gethostname()+now_time, save_code=True)
+wandb.init(project=config.project_name, config=config.__dict__, name=socket.gethostname()+' '+now_time, save_code=True)
 
 for run in range(config.run_times):
     print("run time: {}".format(run + 1))
@@ -62,7 +62,7 @@ for run in range(config.run_times):
     model.fc = nn.Linear(model.fc.in_features, 2)
     # ------------------------------------ step 3/5 : define loss function and optimization ------------------------
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=config.lr_init, weight_decay=5e-4)
+    optimizer = optim.SGD(model.parameters(), lr=config.lr_init, momentum=0.8)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config.max_epoch)
     # ------------------------------------ step 4/5 : training --------------------------------------------------
