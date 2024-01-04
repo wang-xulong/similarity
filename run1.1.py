@@ -1,5 +1,5 @@
 """
-2 phase continual learning
+2 phase continual learning with Hessian, finetune
 """
 import torch
 import os
@@ -24,8 +24,9 @@ config = Namespace(
     train_bs=10,
     test_bs=128,
     lr_init=0.1,
+    lr=0.1,
     max_epoch=200,
-    run_times=3,
+    run_times=2,
     patience=20,
     hessian=True,
     device='cuda',
@@ -50,7 +51,8 @@ config.device = torch.device(config.device if torch.cuda.is_available() else "cp
 config.kwargs = {"num_workers": 16, "pin_memory": True, "prefetch_factor": config.train_bs * 2} if use_cuda else {}
 
 now_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-wandb.init(project=config.project_name, config=config.__dict__, name=socket.gethostname()+' '+now_time, save_code=True)
+wandb.init(project=config.project_name, config=config.__dict__, name=socket.gethostname() + ' ' + now_time,
+           save_code=True)
 
 for run in range(config.run_times):
     print("run time: {}".format(run + 1))

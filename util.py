@@ -106,7 +106,7 @@ def train_es(config, train_data, test_data, model, criterion, optimizer, schedul
                 model,
                 test_data,
                 criterion,
-                num_eigenthings=1,
+                num_eigenthings=5,
                 mode="power_iter",
                 max_possible_gpu_samples=config.test_bs,
                 use_gpu=True,
