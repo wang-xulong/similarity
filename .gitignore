@@ -19,6 +19,7 @@ run
 #*.txt
 test.py
 Data/
+outputs/
 
 
 # Distribution / packaging

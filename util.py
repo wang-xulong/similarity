@@ -8,10 +8,30 @@ import torchvision.transforms as transforms
 import copy
 from CLDataset import MyDataset
 from external_libs.hessian_eigenthings import compute_hessian_eigenthings
+import uuid
 
 # import wandb
-
+TRIAL_ID = uuid.uuid4().hex.upper()[0:6]
+EXPERIMENT_DIRECTORY = './outputs/{}'.format(TRIAL_ID)
 experience = 5
+
+
+def create_mkdir(my_dir):
+    if not os.path.isdir(my_dir):
+        os.makedirs(my_dir)
+
+
+def save_checkpoint(model, task_id):
+    """
+    Save checkpoints of model paramters
+    :param model: pytorch model
+    :param task_id: int
+    """
+    filename = '{directory}/model-{trial}-{task}.pth'.format(directory=EXPERIMENT_DIRECTORY, trial=TRIAL_ID,
+                                                             task=task_id)
+    create_mkdir(EXPERIMENT_DIRECTORY)
+    torch.save(model.cpu().state_dict(), filename)
+    return filename
 
 
 def train_es(config, train_data, test_data, model, criterion, optimizer, scheduler, max_epoch, device, patience,
